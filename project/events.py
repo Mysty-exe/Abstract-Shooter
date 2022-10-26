@@ -1,7 +1,10 @@
 import pygame
 import project.characters as characters
+from project.math import Vector
+
 
 class KeyboardInput:
+
     def __init__(self):
         self.events_queue = []
 
@@ -17,8 +20,10 @@ class KeyboardInput:
 
 
 class MouseInput:
+
     def __init__(self):
-        pass
+        self.coords = []
+        self.button_pressed = []
 
     @classmethod
     def check_quit(cls, events, state):
@@ -27,5 +32,10 @@ class MouseInput:
                 state = 'Quit'
         return state
 
-    def process_events(self, events):
-        pass
+    def process_events(self, pressed, coords):
+        mouse_Vector = Vector(coords[0], coords[1])
+        self.coords.append(mouse_Vector)
+        if pressed:
+            self.button_pressed.append(mouse_Vector)
+
+        return mouse_Vector

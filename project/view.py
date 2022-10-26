@@ -2,26 +2,37 @@ import pygame
 import project.constants as constants
 import project.events as events
 from project.characters import Player
+from project.math import Vector
+
 
 class View:
+
     def __init__(self):
         self.width, self.height = constants.GAME_WIDTH, constants.GAME_HEIGHT
         self.screen = pygame.display.set_mode((self.width, self.height))
 
-class GameView( View ):
+
+class GameView(View):
+
     def __init__(self):
         View.__init__(self)
         self.player = Player()
         self.k_input = events.KeyboardInput()
         self.m_input = events.MouseInput()
 
-    def run(self, state):
+    def run(self, dt, state):
         self.screen.fill(constants.COLOURS['white'])
         self.player.draw(self.screen)
 
         k_events = self.k_input.process_events(pygame.key.get_pressed())
-        self.player.move(k_events)
+        m_events = self.m_input.process_events(pygame.mouse.get_pressed()[0],
+                                               pygame.mouse.get_pos())
+        self.player.move(dt, k_events)
         self.player.reset_direction(k_events)
         self.k_input.empty_queue()
+        mouseDirection = m_events.sub(self.player.vector)
+        pygame.draw.line(
+            self.screen, constants.COLOURS['blue'], (0, 0),
+            mouseDirection.normalize().multiply(Vector(25, 25)).coord())
 
         return state
