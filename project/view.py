@@ -22,17 +22,19 @@ class GameView(View):
 
     def run(self, dt, state):
         self.screen.fill(constants.COLOURS['white'])
-        self.player.draw(self.screen)
 
         k_events = self.k_input.process_events(pygame.key.get_pressed())
         m_events = self.m_input.process_events(pygame.mouse.get_pressed()[0],
                                                pygame.mouse.get_pos())
+
+        self.player.draw(self.screen)
         self.player.move(dt, k_events)
         self.player.reset_direction(k_events)
         self.k_input.empty_queue()
-        mouseDirection = m_events.sub(self.player.vector)
+        mouseDirection = m_events - self.player.vector
         pygame.draw.line(
-            self.screen, constants.COLOURS['blue'], (0, 0),
-            mouseDirection.normalize().multiply(Vector(25, 25)).coord())
+            self.screen, constants.COLOURS['white'], self.player.vector.coord(),
+            (mouseDirection.normalize() * 25 + self.player.vector).coord())
+        print(self.player.vector.dot(m_events))
 
         return state

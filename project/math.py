@@ -10,6 +10,33 @@ class Vector:
     def coord(self):
         return (self.x, self.y)
 
+    def __add__(self, num):
+        if isinstance(num, Vector):
+            self.x += num.x
+            self.y += num.y
+        else:
+            self.x += num
+            self.y += num
+        return Vector(self.x, self.y)
+
+    def __sub__(self, num):
+        if isinstance(num, Vector):
+            self.x -= num.x
+            self.y -= num.y
+        else:
+            self.x -= num
+            self.y = num
+        return Vector(self.x, self.y)
+
+    def __mul__(self, num):
+        if isinstance(num, Vector):
+            self.x *= num.x
+            self.y *= num.y
+        else:
+            self.x *= num
+            self.y *= num
+        return Vector(self.x, self.y)
+
     def magnitude(self):
         return math.sqrt((self.x**2) + (self.y**2))
 
@@ -17,26 +44,18 @@ class Vector:
         return math.sqrt(
             math.exp(self.x - vector.x, 2) + math.exp(self.y - vector.y, 2))
 
-    def add(self, vector):
-        vectorx = self.x + vector.x
-        vectory = self.y + vector.y
-        return Vector(vectorx, vectory)
-
-    def sub(self, vector):
-        vectorx = self.x - vector.x
-        vectory = self.y - vector.y
-        return Vector(vectorx, vectory)
-
-    def multiply(self, vector):
-        vectorx = self.x * vector.x
-        vectory = self.y * vector.y
-        return Vector(vectorx, vectory)
-
     def normalize(self):
         mag = self.magnitude()
         x = self.x / mag
         y = self.y / mag
         return Vector(x, y)
+
+    def dot(self, vector):
+        v1 = self.normalize()
+        v2 = vector.normalize()
+
+        v = v1 * v2
+        return math.degrees(math.atan2(v.y, v.x))
 
     def __str__(self):
         return f'({self.x}, {self.y})'
