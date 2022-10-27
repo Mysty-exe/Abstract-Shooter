@@ -1,10 +1,7 @@
 import pygame
-from project.characters import Player
 import project.events as events
 import project.constants as constants
-import project.images as images
 import project.view as view
-import time
 import sys
 
 
@@ -14,7 +11,7 @@ class GameInstance:
         pygame.init()
 
         self.title = constants.GAME_TITLE
-        self.icon = images.icon
+        self.icon = pygame.image.load('assets/icon.png')
 
         pygame.display.set_caption(self.title)
         pygame.display.set_icon(self.icon)

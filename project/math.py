@@ -50,12 +50,8 @@ class Vector:
         y = self.y / mag
         return Vector(x, y)
 
-    def dot(self, vector):
-        v1 = self.normalize()
-        v2 = vector.normalize()
-
-        v = v1 * v2
-        return math.degrees(math.atan2(v.y, v.x))
+    def degree(self, vector):
+        return math.degrees(math.atan2(self.y - vector.y, self.x - vector.x))
 
     def __str__(self):
         return f'({self.x}, {self.y})'

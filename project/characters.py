@@ -1,20 +1,27 @@
 import pygame
-import project.constants as constants
 from project.math import Vector
 
 
 class Character:
 
-    def __init__(self, x, y, width, height):
+    def __init__(self, x, y, width, height, image):
         self.x, self.y = x, y
         self.width, self.height = width, height
         self.vector = Vector(self.x + (self.width / 2),
                              self.y + (self.height / 2))
+        self.image = image
 
-    def draw(self, screen):
+        self.image = pygame.image.load(self.image).convert_alpha()
+        self.image = pygame.transform.scale(self.image,
+                                            (self.width, self.height))
+        self.image = pygame.transform.rotate(self.image, 0)
+
+    def draw(self, screen, angle):
         self.update_vector()
-        pygame.draw.rect(screen, constants.COLOURS['black'],
-                         (self.x, self.y, self.width, self.height))
+        char = pygame.transform.rotate(self.image, angle * -1)
+        char_rect = char.get_rect(center=self.image.get_rect(
+            center=(self.x, self.y)).center)
+        screen.blit(char, char_rect)
 
     def update_vector(self):
         self.vector.x = self.x + (self.width / 2)
@@ -30,7 +37,7 @@ class Player(Character):
     }
 
     def __init__(self):
-        Character.__init__(self, 100, 100, 50, 50)
+        Character.__init__(self, 100, 100, 64, 64, 'assets/icon.png')
         self.direction = [None, None]
         self.velocity = 5
 
