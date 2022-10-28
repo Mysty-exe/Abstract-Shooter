@@ -9,7 +9,7 @@ class View:
     def __init__(self):
         self.width, self.height = constants.GAME_WIDTH, constants.GAME_HEIGHT
         self.screen = pygame.display.set_mode((self.width, self.height))
-        self.cursor = pygame.image.load('assets/icon.png').convert_alpha()
+        self.cursor = pygame.image.load('assets/cursor.png').convert_alpha()
         self.cursor = pygame.transform.scale(self.cursor, (16, 16))
         pygame.mouse.set_visible(False)
 
@@ -30,7 +30,7 @@ class GameView(View):
         mouseVector = self.m_input.process_events(
             pygame.mouse.get_pressed()[0], pos)
         self.screen.blit(self.cursor, (pos[0] - 8, pos[1] - 8))
-        print(self.m_input.button_pressed)
+        # print(self.m_input.button_pressed)
 
         #Keyboard Input
         k_events = self.k_input.process_events(pygame.key.get_pressed())
@@ -41,5 +41,7 @@ class GameView(View):
         self.player.move(dt, k_events)
         self.player.reset_direction(k_events)
         self.k_input.empty_queue()
+        pygame.draw.line(self.screen, constants.COLOURS['red'], self.player.vector.coord(), mouseVector.coord())
+        # print((self.player.x, self.player.y), self.player.vector)
 
         return state

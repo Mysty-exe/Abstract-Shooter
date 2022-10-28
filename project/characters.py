@@ -7,14 +7,13 @@ class Character:
     def __init__(self, x, y, width, height, image):
         self.x, self.y = x, y
         self.width, self.height = width, height
-        self.vector = Vector(self.x + (self.width / 2),
-                             self.y + (self.height / 2))
         self.image = image
 
         self.image = pygame.image.load(self.image).convert_alpha()
         self.image = pygame.transform.scale(self.image,
                                             (self.width, self.height))
-        self.image = pygame.transform.rotate(self.image, 0)
+        self.image = pygame.transform.rotate(self.image, 180)
+        self.vector = Vector(self.x, self.y)
 
     def draw(self, screen, angle):
         self.update_vector()
@@ -24,8 +23,8 @@ class Character:
         screen.blit(char, char_rect)
 
     def update_vector(self):
-        self.vector.x = self.x + (self.width / 2)
-        self.vector.y = self.y + (self.height / 2)
+        self.vector.x = self.x
+        self.vector.y = self.y
 
 
 class Player(Character):
@@ -37,7 +36,7 @@ class Player(Character):
     }
 
     def __init__(self):
-        Character.__init__(self, 100, 100, 64, 64, 'assets/icon.png')
+        Character.__init__(self, 0, 0, 64, 64, 'assets/player.png')
         self.direction = [None, None]
         self.velocity = 5
 
