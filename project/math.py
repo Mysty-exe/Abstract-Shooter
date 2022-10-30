@@ -12,30 +12,39 @@ class Vector:
 
     def __add__(self, num):
         if isinstance(num, Vector):
-            self.x += num.x
-            self.y += num.y
+            x = self.x + num.x
+            y = self.y + num.y
         else:
-            self.x += num
-            self.y += num
-        return Vector(self.x, self.y)
+            x = self.x + num
+            y = self.y + num
+        return Vector(x, y)
 
     def __sub__(self, num):
         if isinstance(num, Vector):
-            self.x -= num.x
-            self.y -= num.y
+            x = self.x - num.x
+            y = self.y - num.y
         else:
-            self.x -= num
-            self.y = num
-        return Vector(self.x, self.y)
+            x = self.x - num
+            y = self.y - num
+        return Vector(x, y)
 
     def __mul__(self, num):
         if isinstance(num, Vector):
-            self.x *= num.x
-            self.y *= num.y
+            x = self.x * num.x
+            y = self.y * num.y
         else:
-            self.x *= num
-            self.y *= num
-        return Vector(self.x, self.y)
+            x = self.x * num
+            y = self.y * num
+        return Vector(x, y)
+
+    def __truediv__(self, num):
+        if isinstance(num, Vector):
+            x = self.x / num.x
+            y = self.y / num.y
+        else:
+            x = self.x / num
+            y = self.y / num
+        return Vector(x, y)
 
     def magnitude(self):
         return math.sqrt((self.x**2) + (self.y**2))
@@ -46,9 +55,8 @@ class Vector:
 
     def normalize(self):
         mag = self.magnitude()
-        x = self.x / mag
-        y = self.y / mag
-        return Vector(x, y)
+        normalized = self / mag
+        return normalized
 
     def degree(self, vector):
         return math.degrees(math.atan2(self.y - vector.y, self.x - vector.x))
