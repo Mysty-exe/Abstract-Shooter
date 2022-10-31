@@ -41,19 +41,19 @@ class Player(Character):
         pass
 
     def process_keys(self, events):
-        if events[pygame.K_w] and self.direction[0] != 'Down':
+        if events[pygame.K_w] and not events[pygame.K_s]:
             self.direction[0] = 'Up'
             self.vely = -5
 
-        if events[pygame.K_s] and self.direction[0] != 'Up':
+        if events[pygame.K_s] and not events[pygame.K_w]:
             self.direction[0] = 'Down'
             self.vely = 5
 
-        if events[pygame.K_a] and self.direction[1] != 'Right':
+        if events[pygame.K_a] and not events[pygame.K_d]:
             self.direction[1] = 'Left'
             self.velx = -5
 
-        if events[pygame.K_d] and self.direction[1] != 'Left':
+        if events[pygame.K_d] and not events[pygame.K_a]:
             self.direction[1] = 'Right'
             self.velx = 5
 
