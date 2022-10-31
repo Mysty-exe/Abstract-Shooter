@@ -1,6 +1,5 @@
 import pygame
 from project.math import Vector
-# https://www.youtube.com/watch?v=qJq7I2DLGzI
 
 
 class Character:
@@ -36,39 +35,48 @@ class Player(Character):
         self.direction = [None, None]
         self.velx = 0
         self.vely = 0
+        self.velgoalx = 0
+        self.velgoaly = 0
 
-    def approach(self):
-        pass
+    def approach(self, goal, current, dt):
+        difference = goal - current
+        if difference > dt:
+            return current + dt
+        if difference < -dt:
+            return current - dt
+
+        return goal
 
     def process_keys(self, events):
         if events[pygame.K_w] and not events[pygame.K_s]:
             self.direction[0] = 'Up'
-            self.vely = -5
+            self.velgoaly = -6
 
         if events[pygame.K_s] and not events[pygame.K_w]:
             self.direction[0] = 'Down'
-            self.vely = 5
+            self.velgoaly = 6
 
         if events[pygame.K_a] and not events[pygame.K_d]:
             self.direction[1] = 'Left'
-            self.velx = -5
+            self.velgoalx = -6
 
         if events[pygame.K_d] and not events[pygame.K_a]:
             self.direction[1] = 'Right'
-            self.velx = 5
+            self.velgoalx = 6
 
         if not events[pygame.K_w] and not events[pygame.K_s]:
             self.direction[0] = None
-            self.vely = 0
+            self.velgoaly = 0
 
         if not events[pygame.K_d] and not events[pygame.K_a]:
             self.direction[1] = None
-            self.velx = 0
+            self.velgoalx = 0
 
     def move(self, dt):
+        self.velx = self.approach(self.velgoalx, self.velx, dt / 3)
+        self.vely = self.approach(self.velgoaly, self.vely, dt / 3)
         self.vector.x += self.velx * dt
         self.vector.y += self.vely * dt
-        print(self.velx, self.vely, self.direction)
 
     def shoot(self, mouseInput, mouseCoord, angle):
         self.gun.reload()
