@@ -14,6 +14,8 @@ class View:
         self.cursor = pygame.transform.scale(self.cursor, (16, 16))
         # pygame.mouse.set_visible(False)
 
+        self.bg = pygame.image.load('assets/background.jpg').convert_alpha()
+
     def draw_cursor(self, pos):
         self.screen.blit(self.cursor, (pos[0] + 8, pos[1] + 8))
 
@@ -28,6 +30,7 @@ class GameView(View):
 
     def run(self, dt, state):
         self.screen.fill(constants.COLOURS['black'])
+        self.screen.blit(self.bg, (0, 0))
 
         pos = pygame.mouse.get_pos()
         mouseVector = self.m_input.process_events(
