@@ -35,11 +35,19 @@ class Player(Character):
     def __init__(self, gun):
         Character.__init__(self, 100, 100, 64, 64)
         self.gun = gun
-        self.direction = [None, None, None]
+        self.direction = [None, None, None, None]
+
+        self.dashvel = 0
+        self.dash_velgoal = 20
+
         self.velx = 0
         self.vely = 0
         self.velgoalx = 0
         self.velgoaly = 0
+
+        self.dash_direction = 0
+        self.max_dash = 30
+        self.dash_time = 0
 
     def approach(self, goal, current, dt):
         difference = goal - current
@@ -51,19 +59,19 @@ class Player(Character):
         return goal
 
     def process_keys(self, events):
-        if events[pygame.K_w] and not events[pygame.K_s]:
+        if events[pygame.K_w] and not events[pygame.K_s] and not self.isdashing():
             self.direction[0] = 'Up'
             self.velgoaly = -6
 
-        if events[pygame.K_s] and not events[pygame.K_w]:
+        if events[pygame.K_s] and not events[pygame.K_w] and not self.isdashing():
             self.direction[0] = 'Down'
             self.velgoaly = 6
 
-        if events[pygame.K_a] and not events[pygame.K_d]:
+        if events[pygame.K_a] and not events[pygame.K_d] and not self.isdashing():
             self.direction[1] = 'Left'
             self.velgoalx = -6
 
-        if events[pygame.K_d] and not events[pygame.K_a]:
+        if events[pygame.K_d] and not events[pygame.K_a] and not self.isdashing():
             self.direction[1] = 'Right'
             self.velgoalx = 6
 
@@ -77,19 +85,32 @@ class Player(Character):
 
         if events[pygame.K_SPACE] and self.direction[2] != 'Dashing':
             self.direction[2] = 'Dashing'
-            # self.velgoalx, self.velgoaly = 15, 15
-        else:
-            self.direction[2] = None
+            self.dash_direction = (self.direction[3]).normalize()
 
-    def move(self, dt):
-        print(self.direction)
+    def move(self, mouse, dt):
+        self.direction[3] = (mouse - self.vector)
+
+        self.dash(mouse, dt)
+        print(self.dashvel)
         self.velx = self.approach(self.velgoalx, self.velx, dt / 3)
         self.vely = self.approach(self.velgoaly, self.vely, dt / 3)
         self.vector.x += self.velx * dt
         self.vector.y += self.vely * dt
 
-    def dash_direction(self, mouse):
-        direction = (mouse - self.vector)
+    def dash(self, mouse, dt):
+        if self.isdashing() and self.dash_time < self.max_dash:
+            self.dash_time += 1
+            self.dashvel = self.approach(self.dash_velgoal, self.dashvel, dt * 2)
+            self.vector += self.dash_direction * self.dashvel * dt
+
+            if self.dash_time > self.max_dash / 2:
+                self.dash_velgoal = 0
+
+            if self.dash_time >= self.max_dash:
+                self.direction[2] = None
+                self.dash_velgoal = 20
+                self.dash_time = 0
+                self.dashvel = 0
 
     def shoot(self, mouseInput, mouseCoord, angle):
         self.gun.reload()
@@ -98,6 +119,11 @@ class Player(Character):
             self.gun.add_bullet(self.vector.x, self.vector.y,
                                 direction.normalize(), angle)
             self.gun.trigger_time = self.gun.max_trigger
+
+    def isdashing(self):
+        if self.direction[2] == 'Dashing':
+            return True
+        return False
 
     def isidle(self):
         if self.direction == [None, None]:

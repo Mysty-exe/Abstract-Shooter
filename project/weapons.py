@@ -12,8 +12,7 @@ class Bullet:
         self.direction = direction
         self.speed = speed
         self.image = pygame.image.load('assets/player.png').convert_alpha()
-        self.image = pygame.transform.scale(self.image,
-                                            (self.width, self.height))
+        self.image = pygame.transform.scale(self.image, (self.width, self.height))
         self.image = pygame.transform.rotate(self.image, angle * -1)
 
     @classmethod

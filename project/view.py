@@ -41,7 +41,7 @@ class GameView(View):
         weapons.Bullet.draw(self.screen, dt)
         self.player.process_keys(pygame.key.get_pressed())
         self.player.draw(self.screen, angle)
-        self.player.move(dt)
+        self.player.move(mouseVector, dt)
         self.player.shoot(m_input, mouseVector, angle)
         # self.draw_cursor((pos[0] - 8, pos[1] - 8))
         self.k_input.empty_queue()
