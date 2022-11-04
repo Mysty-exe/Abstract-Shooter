@@ -7,20 +7,34 @@ class Character:
 
     def __init__(self, x, y, width, height):
         self.vector = Vector(x, y)
+        self.realVector = Vector(x, y)
         self.width, self.height = width, height
 
         self.surf = pygame.Surface((width, height))
-        self.surf.set_colorkey(constants.COLOURS['black'])
+        self.surf.set_colorkey(constants.COLOURS['blue'])
         self.surf.fill(constants.COLOURS['black'])
 
-        self.rect = pygame.Rect(0, 0, self.width, self.height)
+        self.rotated = pygame.transform.rotate(self.surf, 0)
+        self.rotated_rect = self.surf.get_rect()
+        self.border = pygame.Rect(0, 0, self.width, self.height)
 
-    def draw(self, screen, angle):
-        rotated = pygame.transform.rotate(self.surf, angle * -1)
-        rotated_rect = rotated.get_rect(center=self.surf.get_rect(
-            center=(self.vector.x, self.vector.y)).center)
-        pygame.draw.rect(self.surf, constants.COLOURS['white'], self.rect, 2)
-        screen.blit(rotated, rotated_rect)
+    def draw(self, screen, angle, scroll):
+
+        self.rotated = pygame.transform.rotate(self.surf, angle * -1)
+        self.rotated_rect = self.rotated.get_rect(
+            center=(self.vector.x,
+                    self.vector.y)).clamp(pygame.Rect(0, 0, 2000, 2000))
+
+        self.rotated_rect.x -= scroll[0]
+        self.rotated_rect.y -= scroll[1]
+        self.realVector = self.vector - Vector(scroll[0], scroll[1])
+
+        pygame.draw.rect(self.surf, constants.COLOURS['white'], self.border, 3)
+        screen.blit(self.rotated, self.rotated_rect)
+
+    def draw_line(self, screen, mouseCoord, scroll):
+        pygame.draw.line(screen, constants.COLOURS['red'],
+                         self.realVector.coord(), mouseCoord.coord())
 
 
 class Player(Character):
@@ -33,7 +47,7 @@ class Player(Character):
     }
 
     def __init__(self, gun):
-        Character.__init__(self, 100, 100, 64, 64)
+        Character.__init__(self, 1000, 1000, 64, 64)
         self.gun = gun
         self.direction = [None, None, None, None]
 
@@ -45,7 +59,7 @@ class Player(Character):
         self.velgoalx = 0
         self.velgoaly = 0
 
-        self.dash_color = [0, 0, 0]
+        self.dash_color = [255, 255, 255]
         self.dash_direction = 0
         self.max_dash = 30
         self.dash_time = 0
@@ -92,10 +106,11 @@ class Player(Character):
             self.direction[2] = 'Dashing'
             self.dash_direction = (self.direction[3]).normalize()
 
-    def move(self, mouse, dt):
-        self.direction[3] = (mouse - self.vector)
+    def move(self, mouse, dt, scroll):
+        self.direction[3] = (mouse - self.realVector)
 
         self.dash(mouse, dt)
+        self.bounce(scroll, dt)
         self.velx = self.approach(self.velgoalx, self.velx, dt / 3)
         self.vely = self.approach(self.velgoaly, self.vely, dt / 3)
         self.vector.x += self.velx * dt
@@ -104,10 +119,12 @@ class Player(Character):
     def dash(self, mouse, dt):
         if self.isdashing() and self.dash_time < self.max_dash:
             self.dash_time += 1
+
             self.dash_color[0] -= 8.5
             self.dash_color[1] -= 8.5
             self.dash_color[2] -= 8.5
             self.surf.fill(self.dash_color)
+
             self.dashvel = self.approach(self.dash_velgoal, self.dashvel, 2)
             self.vector += self.dash_direction * self.dashvel * dt
 
@@ -115,19 +132,30 @@ class Player(Character):
                 self.dash_velgoal = 0
 
             if self.dash_time >= self.max_dash:
-                self.surf.fill(constants.COLOURS['white'])
-                self.dash_color = [0, 0, 0]
+                self.surf.fill(constants.COLOURS['black'])
+                self.dash_color = [255, 255, 255]
                 self.direction[2] = None
                 self.dash_velgoal = 20
                 self.dash_time = 0
                 self.dashvel = 0
 
-    def shoot(self, mouseInput, mouseCoord, angle):
+    def bounce(self, scroll, dt):
+        if (self.rotated_rect.x + scroll[0]) == 0:
+            self.vector.x += 100
+        if (self.rotated_rect.x + scroll[0] + self.rotated_rect.width) == 2000:
+            self.vector.x -= 100
+
+        if (self.rotated_rect.y + scroll[1]) == 0:
+            self.vector.y += 100
+        if (self.rotated_rect.y + scroll[1] + self.rotated_rect.width) == 2000:
+            self.vector.y -= 100
+
+    def shoot(self, mouseInput, mouseCoord):
         self.gun.reload()
         if mouseInput != False and self.gun.trigger_time == 0:
-            direction = (mouseCoord - self.vector)
-            self.gun.add_bullet(self.vector.x, self.vector.y,
-                                direction.normalize(), angle)
+            direction = (mouseCoord - self.realVector)
+            self.gun.add_bullet(self.realVector.x, self.realVector.y,
+                                direction.normalize())
             self.gun.trigger_time = self.gun.max_trigger
 
     def isdashing(self):

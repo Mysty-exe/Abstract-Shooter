@@ -5,45 +5,41 @@ from project.math import Vector
 class Bullet:
     bullets = []
 
-    def __init__(self, x, y, width, height, direction, angle, speed):
-        self.x, self.y = x, y
-        self.pos = Vector(self.x, self.y)
-        self.width, self.height = width, height
+    def __init__(self, x, y, radius, direction, speed):
+        self.pos = Vector(x, y)
+        self.radius = radius
         self.direction = direction
         self.speed = speed
-        self.image = pygame.image.load('assets/player.png').convert_alpha()
-        self.image = pygame.transform.scale(self.image, (self.width, self.height))
-        self.image = pygame.transform.rotate(self.image, angle * -1)
 
     @classmethod
-    def draw(cls, screen, dt):
+    def draw(cls, screen, dt, scroll):
         for bullet in cls.bullets:
             bullet.pos += bullet.direction * bullet.speed * dt
-            bullet.x = round(bullet.pos.x)
-            bullet.y = round(bullet.pos.y)
-            b = bullet.image.get_rect(center=bullet.image.get_rect(
-                center=(bullet.x, bullet.y)).center)
-            screen.blit(bullet.image, b)
+            bullet.pos.x = round(bullet.pos.x)
+            bullet.pos.y = round(bullet.pos.y)
+
+            if bullet.pos.x + scroll[0] <= 0 or bullet.pos.x + scroll[
+                    0] >= 2000:
+                cls.bullets.remove(bullet)
+                continue
+            if bullet.pos.y + scroll[1] <= 0 or bullet.pos.y + scroll[
+                    1] >= 2000:
+                cls.bullets.remove(bullet)
+                continue
+
+            pygame.draw.circle(screen, (255, 255, 255),
+                               (bullet.pos.x, bullet.pos.y), bullet.radius)
 
 
 class Gun:
 
-    def __init__(self,
-                 bullet_width,
-                 bullet_height,
-                 speed,
-                 trigger_time,
-                 guns=1):
-        self.bullet_width = bullet_width
-        self.bullet_height = bullet_height
+    def __init__(self, radius, speed, trigger_time):
+        self.radius = radius
         self.speed = speed
         self.trigger_time = trigger_time
-        self.guns = guns
 
-    def add_bullet(self, x, y, direction, angle):
-        Bullet.bullets.append(
-            Bullet(x, y, self.bullet_width, self.bullet_height, direction,
-                   angle, self.speed))
+    def add_bullet(self, x, y, direction):
+        Bullet.bullets.append(Bullet(x, y, self.radius, direction, self.speed))
 
     def reload(self):
         if self.trigger_time > 0:
@@ -54,55 +50,50 @@ class Pistol(Gun):
 
     def __init__(self):
         self.max_trigger = 60
-        width = 15
-        height = 10
-        speed = 15
+        radius = 5
+        speed = 5
         trigger_time = 0
-        Gun.__init__(self, width, height, speed, trigger_time)
+        Gun.__init__(self, radius, speed, trigger_time)
 
 
 class SubMachine(Gun):
 
     def __init__(self):
         self.max_trigger = 10
-        width = 15
-        height = 5
+        radius = 5
         speed = 15
         trigger_time = 0
-        Gun.__init__(self, width, height, speed, trigger_time)
+        Gun.__init__(self, radius, speed, trigger_time)
 
 
 class AssaultRifle(Gun):
 
     def __init__(self):
         self.max_trigger = 15
-        width = 20
-        height = 10
+        radius = 5
         speed = 10
         trigger_time = 0
-        Gun.__init__(self, width, height, speed, trigger_time)
+        Gun.__init__(self, radius, speed, trigger_time)
 
 
 class MiniGun(Gun):
 
     def __init__(self):
         self.max_trigger = 5
-        width = 15
-        height = 10
+        radius = 5
         speed = 15
         trigger_time = 0
-        Gun.__init__(self, width, height, speed, trigger_time)
+        Gun.__init__(self, radius, speed, trigger_time)
 
 
 class Sniper(Gun):
 
     def __init__(self):
         self.max_trigger = 180
-        width = 30
-        height = 10
+        radius = 5
         speed = 30
         trigger_time = 0
-        Gun.__init__(self, width, height, speed, trigger_time)
+        Gun.__init__(self, radius, speed, trigger_time)
 
 
 class Shotgun(Gun):
