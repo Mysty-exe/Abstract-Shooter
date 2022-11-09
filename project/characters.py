@@ -15,11 +15,10 @@ class Character:
         self.surf.fill(constants.COLOURS['black'])
 
         self.rotated = pygame.transform.rotate(self.surf, 0)
-        self.rotated_rect = self.surf.get_rect()
+        self.rotated_rect = self.rotated.get_rect()
         self.border = pygame.Rect(0, 0, self.width, self.height)
 
     def draw(self, screen, angle, scroll):
-
         self.rotated = pygame.transform.rotate(self.surf, angle * -1)
         self.rotated_rect = self.rotated.get_rect(
             center=(self.vector.x,
@@ -46,23 +45,28 @@ class Player(Character):
         pygame.K_d: ('Right', 1)
     }
 
-    def __init__(self, gun):
-        Character.__init__(self, 1000, 1000, 64, 64)
+    def __init__(self, room, gun):
+        Character.__init__(self, 100, 100, 64, 64)
+        self.room = room
         self.gun = gun
         self.direction = [None, None, None, None]
 
-        self.dashvel = 0
-        self.dash_velgoal = 20
+        self.bounce_direction = 0
+        self.bouncevel = 7
 
         self.velx = 0
         self.vely = 0
         self.velgoalx = 0
         self.velgoaly = 0
 
+        self.dashvel = 0
+        self.dash_velgoal = 20
         self.dash_color = [255, 255, 255]
         self.dash_direction = 0
         self.max_dash = 30
         self.dash_time = 0
+
+        self.collecting = False
 
     def approach(self, goal, current, dt):
         difference = goal - current
@@ -73,50 +77,54 @@ class Player(Character):
 
         return goal
 
-    def process_keys(self, events):
-        if events[pygame.
-                  K_w] and not events[pygame.K_s] and not self.isdashing():
+    def process_keys(self, screen, keys, scroll):
+        if keys[pygame.K_w] and not keys[pygame.K_s] and not self.isdashing():
             self.direction[0] = 'Up'
             self.velgoaly = -6
 
-        if events[pygame.
-                  K_s] and not events[pygame.K_w] and not self.isdashing():
+        if keys[pygame.K_s] and not keys[pygame.K_w] and not self.isdashing():
             self.direction[0] = 'Down'
             self.velgoaly = 6
 
-        if events[pygame.
-                  K_a] and not events[pygame.K_d] and not self.isdashing():
+        if keys[pygame.K_a] and not keys[pygame.K_d] and not self.isdashing():
             self.direction[1] = 'Left'
             self.velgoalx = -6
 
-        if events[pygame.
-                  K_d] and not events[pygame.K_a] and not self.isdashing():
+        if keys[pygame.K_d] and not keys[pygame.K_a] and not self.isdashing():
             self.direction[1] = 'Right'
             self.velgoalx = 6
 
-        if not events[pygame.K_w] and not events[pygame.K_s]:
+        if not keys[pygame.K_w] and not keys[pygame.K_s]:
             self.direction[0] = None
             self.velgoaly = 0
 
-        if not events[pygame.K_d] and not events[pygame.K_a]:
+        if not keys[pygame.K_d] and not keys[pygame.K_a]:
             self.direction[1] = None
             self.velgoalx = 0
 
-        if events[pygame.K_SPACE] and self.direction[2] != 'Dashing':
+        if keys[pygame.K_SPACE] and self.direction[2] != 'Dashing':
             self.direction[2] = 'Dashing'
             self.dash_direction = (self.direction[3]).normalize()
+
+        if keys[pygame.K_e] and not self.collecting and (
+                self.unlock_chest() or self.collect_equippables()):
+            self.collecting = True
+
+        if not keys[pygame.K_e]:
+            self.collecting = False
 
     def move(self, mouse, dt, scroll):
         self.direction[3] = (mouse - self.realVector)
 
-        self.dash(mouse, dt)
-        self.bounce(scroll, dt)
-        self.velx = self.approach(self.velgoalx, self.velx, dt / 3)
-        self.vely = self.approach(self.velgoaly, self.vely, dt / 3)
-        self.vector.x += self.velx * dt
-        self.vector.y += self.vely * dt
+        self.hit_border(scroll)
+        self.dash(mouse, dt, scroll)
+        self.velx = self.approach(self.velgoalx, self.velx, dt / 5)
+        self.vely = self.approach(self.velgoaly, self.vely, dt / 5)
+        if not self.hit_border(scroll):
+            self.vector.x += self.velx * dt
+            self.vector.y += self.vely * dt
 
-    def dash(self, mouse, dt):
+    def dash(self, mouse, dt, scroll):
         if self.isdashing() and self.dash_time < self.max_dash:
             self.dash_time += 1
 
@@ -125,13 +133,13 @@ class Player(Character):
             self.dash_color[2] -= 8.5
             self.surf.fill(self.dash_color)
 
-            self.dashvel = self.approach(self.dash_velgoal, self.dashvel, 2)
+            self.dashvel = self.approach(self.dash_velgoal, self.dashvel, dt)
             self.vector += self.dash_direction * self.dashvel * dt
 
             if self.dash_time > self.max_dash / 2:
                 self.dash_velgoal = 0
 
-            if self.dash_time >= self.max_dash:
+            if self.dash_time >= self.max_dash or self.hit_border(scroll):
                 self.surf.fill(constants.COLOURS['black'])
                 self.dash_color = [255, 255, 255]
                 self.direction[2] = None
@@ -139,24 +147,47 @@ class Player(Character):
                 self.dash_time = 0
                 self.dashvel = 0
 
-    def bounce(self, scroll, dt):
+    def hit_border(self, scroll):
         if (self.rotated_rect.x + scroll[0]) == 0:
-            self.vector.x += 100
+            self.vector.x += 0.5
+            return True
         if (self.rotated_rect.x + scroll[0] + self.rotated_rect.width) == 2000:
-            self.vector.x -= 100
+            self.vector.x -= 0.5
+            return True
 
         if (self.rotated_rect.y + scroll[1]) == 0:
-            self.vector.y += 100
+            self.vector.y += 0.5
+            return True
         if (self.rotated_rect.y + scroll[1] + self.rotated_rect.width) == 2000:
-            self.vector.y -= 100
+            self.vector.y -= 0.5
+            return True
+
+        return False
 
     def shoot(self, mouseInput, mouseCoord):
         self.gun.reload()
         if mouseInput != False and self.gun.trigger_time == 0:
-            direction = (mouseCoord - self.realVector)
-            self.gun.add_bullet(self.realVector.x, self.realVector.y,
-                                direction.normalize())
+            direction = (mouseCoord - self.realVector).normalize()
+            self.gun.add_bullet(self.vector.x, self.vector.y, direction)
             self.gun.trigger_time = self.gun.max_trigger
+
+    def unlock_chest(self):
+        for chest in self.room.chests:
+            chestVector = Vector(chest[0] + 64, chest[1] + 64)
+            if self.vector.distance(chestVector) <= 150:
+                self.room.equippables.append((self.gun.random(), chest))
+                self.room.chests.remove(chest)
+                return True
+        return False
+
+    def collect_equippables(self):
+        for eq in self.room.equippables:
+            equipVector = Vector(eq[1][0] + 64, eq[1][1] + 64)
+            if self.vector.distance(equipVector) <= 100:
+                self.gun = eq[0]
+                self.room.equippables.remove(eq)
+                return True
+        return False
 
     def isdashing(self):
         if self.direction[2] == 'Dashing':
