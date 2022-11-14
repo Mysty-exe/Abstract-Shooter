@@ -50,7 +50,11 @@ class Vector:
         return math.sqrt((self.x**2) + (self.y**2))
 
     def distance(self, vector):
-        return math.sqrt(((self.x - vector.x) ** 2) + ((self.y - vector.y) ** 2))
+        return math.sqrt(((self.x - vector.x)**2) + ((self.y - vector.y)**2))
+
+    def midpoint(self, vector):
+        midpoint = (int(self.x + vector.x) / 2, int(self.y + vector.y) / 2)
+        return Vector(midpoint[0], midpoint[1])
 
     def normalize(self):
         mag = self.magnitude()
@@ -70,7 +74,7 @@ class Vector:
         rotatedY = originPoint.x * math.sin(angle) + originPoint.y * math.cos(
             angle)
 
-        return round(rotatedX + origin.x), round(rotatedY + origin.y)
+        return Vector(round(rotatedX + origin.x), round(rotatedY + origin.y))
 
     def __str__(self):
         return f'({self.x}, {self.y})'

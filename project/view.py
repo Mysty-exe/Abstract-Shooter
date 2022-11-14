@@ -1,8 +1,9 @@
 import pygame
 import project.constants as constants
 import project.events as events
-from project.characters import Player
 import project.weapons as weapons
+import project.powerups as powerups
+from project.characters import Player
 from project.room import Room
 
 
@@ -22,29 +23,43 @@ class GameView(View):
     def __init__(self):
         View.__init__(self)
 
+        weapons.Gun.guns = [
+            weapons.Pistol(),
+            weapons.SubMachine(),
+            weapons.AssaultRifle(),
+            weapons.MiniGun(),
+            weapons.Sniper(),
+            weapons.Shotgun()
+        ]
+
+        powerups.PowerUp.powerups = [
+            powerups.Health(),
+            powerups.Damage(),
+            powerups.BulletSpeed(),
+            powerups.PlayerSpeed(),
+            powerups.Ammo(),
+            powerups.Shield(),
+            powerups.TwoGuns()
+        ]
+
         self.display = pygame.Surface((self.width, self.height))
 
-        self.k_input = events.KeyboardInput()
         self.m_input = events.MouseInput()
-        self.cursor1 = pygame.image.load(
-            'assets/idle_cursor.png').convert_alpha()
-        self.cursor2 = pygame.image.load(
-            'assets/target_cursor.png').convert_alpha()
+
+        cursor1, cursor2 = 'assets/idle_cursor.png', 'assets/target_cursor.png'
+        self.cursor_state = 'Idle'
+
+        self.idle_cursor = pygame.image.load(cursor1).convert_alpha()
+        self.target_cursor = pygame.image.load(cursor2).convert_alpha()
 
         self.true_scroll = [0, 0]
         self.scroll = self.true_scroll.copy()
 
         self.room = Room(self.display, 2000)
 
-        weapons.Gun.guns = [
-            weapons.Pistol(),
-            weapons.SubMachine(),
-            weapons.AssaultRifle(),
-            weapons.MiniGun(),
-            weapons.Sniper()
-        ]
-
-        self.player = Player(self.room, weapons.Pistol())
+        self.player = Player(self.room, weapons.Shotgun(), powerups.PowerUp)
+        Player.powerups = powerups.PowerUp.powerups
+        Player.guns = weapons.Gun.guns
 
     def run(self, dt, state):
         self.update_camera()
@@ -52,34 +67,41 @@ class GameView(View):
         self.screen.blit(self.display, (0, 0))
         self.display.fill(constants.COLOURS['black'])
 
+        pos = pygame.mouse.get_pos()
+        mouse_pressed = pygame.mouse.get_pressed()[0]
+        mouseVector = self.m_input.process_events(mouse_pressed, pos)
+        angle = self.player.realVector.degree(mouseVector)
+
+        if self.cursor_state == 'Idle':
+            self.draw_cursor(self.idle_cursor, pos)
+        else:
+            self.draw_cursor(self.target_cursor, pos)
+
         self.room.draw_field(self.scroll)
         self.room.draw_chests(self.scroll)
         self.room.draw_equippables(self.scroll)
 
-        pos = pygame.mouse.get_pos()
-        mouseVector = self.m_input.process_events(
-            pygame.mouse.get_pressed()[0], pos)
-        angle = self.player.realVector.degree(mouseVector)
-
         weapons.Bullet.draw(self.display, dt, self.scroll)
         weapons.Bullet.explode_bullets(self.display, self.scroll)
 
-        m_input = self.m_input.button_pressed
-        self.player.process_keys(self.display, pygame.key.get_pressed(), self.scroll)
-        self.player.draw_line(self.display, mouseVector, self.scroll)
-        self.player.draw(self.display, angle, self.scroll)
-        self.player.move(mouseVector, dt, self.scroll)
-        self.player.shoot(m_input, mouseVector)
-        self.k_input.empty_queue()
+        mouse = self.m_input.button_pressed
+        key_pressed = pygame.key.get_pressed()
+        self.player.process_keys(self.display, key_pressed, self.scroll)
 
-        self.draw_cursor(self.cursor1, pos)
+        self.player.draw(self.display, angle, self.scroll)
+        self.player.draw_line(self.display, mouseVector, self.scroll)
+
+        self.player.move(mouseVector, dt, self.scroll)
+        self.player.shoot(mouse, mouseVector, self.scroll)
+
+        self.player.listen_powerups()
 
         return state
 
     def update_camera(self):
-        self.true_scroll[0] += (self.player.vector.x - self.scroll[0] -
-                                (self.width / 2)) / 15
-        self.true_scroll[1] += (self.player.vector.y - self.scroll[1] -
-                                (self.height / 2)) / 15
+        x, y = self.player.vector.x, self.player.vector.y
+        width, height = self.width / 2, self.height / 2
+        self.true_scroll[0] += (x - self.scroll[0] - width) / 15
+        self.true_scroll[1] += (y - self.scroll[1] - height) / 15
         self.scroll[0] = int(self.true_scroll[0])
         self.scroll[1] = int(self.true_scroll[1])
