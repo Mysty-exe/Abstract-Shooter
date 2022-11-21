@@ -46,6 +46,16 @@ class Vector:
             y = self.y / num
         return Vector(x, y)
 
+    def __round__(self):
+        self.x = round(self.x)
+        self.y = round(self.y)
+        return self
+
+    def is_zero(self):
+        if self.x == 0 and self.y == 0:
+            return True
+        return False
+
     def magnitude(self):
         return math.sqrt((self.x**2) + (self.y**2))
 
@@ -63,6 +73,11 @@ class Vector:
 
     def degree(self, vector):
         return math.degrees(math.atan2(self.y - vector.y, self.x - vector.x))
+
+    def getCircle(self, radius, angle):
+        angle = math.radians(angle)
+        return Vector(self.x + radius * math.cos(angle),
+                      self.y + radius * math.cos(angle))
 
     def rotate(self, origin, angle):
         angle = math.radians(angle)

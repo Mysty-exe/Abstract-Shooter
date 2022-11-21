@@ -1,11 +1,13 @@
 import pygame
 from project.math import Vector
 import project.constants as constants
+import random
 
 
-class Character:
+class Entity:
 
-    def __init__(self, x, y, width, height, color):
+    def __init__(self, room, x, y, width, height, color):
+        self.room = room
         self.vector = Vector(x, y)
         self.realVector = Vector(x, y)
         self.width, self.height = width, height
@@ -18,8 +20,17 @@ class Character:
         self.rotated_rect = self.rotated.get_rect()
         self.border = pygame.Rect(0, 0, self.width, self.height)
 
+    def approach(self, goal, current, dt):
+        difference = goal - current
+        if difference > dt:
+            return current + dt
+        if difference < -dt:
+            return current - dt
 
-class Player(Character):
+        return goal
+
+
+class Player(Entity):
 
     keys = {
         pygame.K_w: ('Up', 0),
@@ -32,8 +43,8 @@ class Player(Character):
     powerups = []
 
     def __init__(self, room, gun, powerup):
-        Character.__init__(self, 100, 100, 64, 64, constants.COLOURS['black'])
-        self.room = room
+        Entity.__init__(self, room, 100, 100, 64, 64,
+                        constants.COLOURS['black'])
         self.gun = gun
         self.twoguns = [
             Vector(self.vector.x - 32, self.vector.y + 32),
@@ -41,8 +52,10 @@ class Player(Character):
         ]
         self.powerup = powerup
         self.direction = [None, None, None, None]
+        self.increment = Vector(0, 0)
 
-        self.speed = 6
+        self.circle = []
+        self.speed = 7
         self.velx = 0
         self.vely = 0
         self.velgoalx = 0
@@ -61,7 +74,6 @@ class Player(Character):
         self.active_powerups = []
 
     def draw(self, screen, angle, scroll):
-
         self.twoguns = [
             Vector(self.vector.x - 32, self.vector.y + 32),
             Vector(self.vector.x - 32, self.vector.y - 32)
@@ -85,15 +97,6 @@ class Player(Character):
     def draw_line(self, screen, mouseCoord, scroll):
         pygame.draw.line(screen, constants.COLOURS['red'],
                          self.realVector.coord(), mouseCoord.coord())
-
-    def approach(self, goal, current, dt):
-        difference = goal - current
-        if difference > dt:
-            return current + dt
-        if difference < -dt:
-            return current - dt
-
-        return goal
 
     def process_keys(self, screen, keys, scroll):
         if keys[pygame.K_w] and not keys[pygame.K_s] and not self.isdashing():
@@ -140,12 +143,28 @@ class Player(Character):
         self.direction[3] = (mouse - self.realVector)
 
         self.hit_border(scroll)
+        self.update_speed()
         self.dash(mouse, dt, scroll)
         self.velx = self.approach(self.velgoalx, self.velx, dt / 5)
         self.vely = self.approach(self.velgoaly, self.vely, dt / 5)
         if not self.hit_border(scroll):
             self.vector.x += self.velx * dt
             self.vector.y += self.vely * dt
+        self.increment = Vector(self.velx * dt, self.vely * dt)
+
+    def update_speed(self):
+        if self.gun.name == 'Pistol':
+            self.speed = 7
+        elif self.gun.name == 'SubMachine Gun':
+            self.speed = 6
+        elif self.gun.name == 'Assault Rifle':
+            self.speed = 5
+        elif self.gun.name == 'MiniGun':
+            self.speed = 4
+        elif self.gun.name == 'Sniper':
+            self.speed = 4
+        elif self.gun.name == 'Shotgun':
+            self.speed = 5
 
     def dash(self, mouse, dt, scroll):
         if self.isdashing(
@@ -221,7 +240,6 @@ class Player(Character):
         for chest in self.room.chests:
             chestVector = Vector(chest[0] + 64, chest[1] + 64)
             if self.vector.distance(chestVector) <= 150:
-                import random
                 equippables = [self.gun.random()] * 6 + [self.powerups[6]] * 4
                 equippable = random.choice(equippables)
 
@@ -302,6 +320,93 @@ class Player(Character):
         return False
 
     def isidle(self):
-        if self.direction == [None, None]:
+        if self.direction[0] == None and self.direction[1] == None:
             return True
         return False
+
+
+class Enemy(Entity):
+
+    def __init__(self, room, gun):
+        possible_coords = [(random.randint(500, 1900), 100),
+                           (1900, random.randint(100, 1900)),
+                           (random.randint(100, 1900), 1900),
+                           (100, random.randint(500, 1900))]
+        x, y = random.choice(possible_coords)
+        Entity.__init__(self, room, x, y, 64, 64, constants.COLOURS['white'])
+
+        self.vector = Vector(x, y)
+        self.realVector = Vector(x, y)
+        self.gun = gun
+
+        self.speed = 3
+        self.vel = 0
+        self.velgoal = self.speed
+
+        self.locations = []
+        self.poss_locations = []
+        self.direction = 0
+        self.distance = 200
+        self.dest = Vector(0, 0)
+        self.moving = False
+        self.arrived = False
+
+    def draw(self, screen, angle, scroll):
+        self.rotated = pygame.transform.rotate(self.surf, angle * -1)
+        self.rotated_rect = self.rotated.get_rect(
+            center=(self.vector.x,
+                    self.vector.y)).clamp(pygame.Rect(0, 0, 2000, 2000))
+
+        self.rotated_rect.x -= scroll[0]
+        self.rotated_rect.y -= scroll[1]
+        self.realVector = self.vector - Vector(scroll[0], scroll[1])
+
+        pygame.draw.rect(self.surf, constants.COLOURS['black'], self.border, 3)
+        screen.blit(self.rotated, self.rotated_rect)
+
+    # def collide(self, enemies):
+    #     enemies_rect = [e.rotated_rect for e in enemies if self != e]
+    #     enemies = [e for e in enemies if self != e]
+    #     x = self.rotated_rect.collidelist(enemies_rect)
+    #     if x == -1:
+    #         return
+
+    #     # print(x)
+    #     # print([e.vector.coord() for e in enemies if self != e])
+    #     # print(enemies[x].vector, self.vector)
+    #     # print(enemies[x].vector - self.vector)
+    #     # print((enemies[x].vector - self.vector) * -1)
+    #     # print()
+
+    #     self.direction = ((enemies[x].vector - self.vector) * -1).normalize()
+
+    def move(self, player, enemies, dt, scroll):
+
+        # self.locations = []
+        # for angle in range(0, 361):
+        #     self.locations.append(player.vector.getCircle(
+        #         self.distance, angle))
+
+        # distances = sorted([(d, self.vector.distance(d))
+        #                     for d in self.locations],
+        #                    key=lambda t: t[1])[:30]
+
+        # self.dest = distances[random.randint(0, 29)][0]
+        self.direction = (player.vector - self.vector).normalize()
+        # self.moving = True
+
+        # if not player.increment.is_zero():
+        #     self.dest += player.increment
+        #     self.direction = (self.dest - self.vector).normalize()
+
+        if player.vector.distance(self.vector) > self.distance:
+            self.velgoal = self.speed
+            # self.moving = True
+            # self.arrived = False
+        else:
+            self.velgoal = 0
+            # self.moving = False
+            # self.arrived = True
+
+        self.vel = self.approach(self.velgoal, self.vel, dt / 5)
+        self.vector += self.direction * self.vel * dt

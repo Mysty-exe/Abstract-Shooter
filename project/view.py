@@ -44,6 +44,8 @@ class GameView(View):
 
         self.display = pygame.Surface((self.width, self.height))
 
+        self.timer = 0
+
         self.m_input = events.MouseInput()
 
         cursor1, cursor2 = 'assets/idle_cursor.png', 'assets/target_cursor.png'
@@ -55,14 +57,15 @@ class GameView(View):
         self.true_scroll = [0, 0]
         self.scroll = self.true_scroll.copy()
 
-        self.room = Room(self.display, 2000)
+        self.room = Room(self.display, 2000, 10)
 
-        self.player = Player(self.room, weapons.Shotgun(), powerups.PowerUp)
+        self.player = Player(self.room, weapons.Pistol(), powerups.PowerUp)
         Player.powerups = powerups.PowerUp.powerups
         Player.guns = weapons.Gun.guns
 
     def run(self, dt, state):
         self.update_camera()
+        self.timer += 1
 
         self.screen.blit(self.display, (0, 0))
         self.display.fill(constants.COLOURS['black'])
@@ -70,7 +73,7 @@ class GameView(View):
         pos = pygame.mouse.get_pos()
         mouse_pressed = pygame.mouse.get_pressed()[0]
         mouseVector = self.m_input.process_events(mouse_pressed, pos)
-        angle = self.player.realVector.degree(mouseVector)
+        player_angle = self.player.realVector.degree(mouseVector)
 
         if self.cursor_state == 'Idle':
             self.draw_cursor(self.idle_cursor, pos)
@@ -80,6 +83,8 @@ class GameView(View):
         self.room.draw_field(self.scroll)
         self.room.draw_chests(self.scroll)
         self.room.draw_equippables(self.scroll)
+        if (self.timer / 60) > 5:
+            self.room.draw_enemies(self.player, self.scroll, dt)
 
         weapons.Bullet.draw(self.display, dt, self.scroll)
         weapons.Bullet.explode_bullets(self.display, self.scroll)
@@ -88,7 +93,7 @@ class GameView(View):
         key_pressed = pygame.key.get_pressed()
         self.player.process_keys(self.display, key_pressed, self.scroll)
 
-        self.player.draw(self.display, angle, self.scroll)
+        self.player.draw(self.display, player_angle, self.scroll)
         self.player.draw_line(self.display, mouseVector, self.scroll)
 
         self.player.move(mouseVector, dt, self.scroll)

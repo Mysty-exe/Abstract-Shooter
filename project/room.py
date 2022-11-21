@@ -1,13 +1,19 @@
 import pygame
 import random
 import project.constants as constants
+from project.characters import Enemy
+import project.weapons as weapons
 
 
 class Room:
 
-    def __init__(self, display, size):
+    def __init__(self, display, size, num):
         self.display = display
         self.field = pygame.Rect(0, 0, size, size)
+
+        self.enemies = []
+        for enemy in range(num):
+            self.enemies.append(Enemy(self, weapons.Pistol()))
 
         self.chest = pygame.image.load('assets/chests.png').convert_alpha()
 
@@ -38,3 +44,9 @@ class Room:
         pygame.draw.rect(self.display, constants.COLOURS['grey'], self.field)
         pygame.draw.rect(self.display, constants.COLOURS['white'],
                          (self.field), 5)
+
+    def draw_enemies(self, player, scroll, dt):
+        for enemy in self.enemies:
+            angle = enemy.vector.degree(player.vector)
+            enemy.draw(self.display, angle, scroll)
+            enemy.move(player, self.enemies, dt, scroll)
