@@ -9,13 +9,14 @@ class Room:
 
     def __init__(self, display, size, num):
         self.display = display
-        self.field = pygame.Rect(0, 0, size, size)
+        self.size = size
+        self.field = pygame.Rect(0, 0, self.size, self.size)
 
-        self.enemies = []
-        for enemy in range(num):
-            self.enemies.append(Enemy(self, weapons.Pistol()))
+        for n, enemy in enumerate(range(num)):
+            Enemy.enemies.append(Enemy(self, n + 1, weapons.Gun.random()))
 
         self.chest = pygame.image.load('assets/chests.png').convert_alpha()
+        self.chest = pygame.transform.scale(self.chest, (64, 64))
 
         chest_nums = [0, 1, 2]
         weight = [45, 35, 20]
@@ -23,7 +24,8 @@ class Room:
 
         self.chests = []
         for num in range(self.chest_num):
-            x, y = random.randint(500, 1500), random.randint(500, 1500)
+            x, y = random.randint(150, self.size - 150), random.randint(
+                150, self.size - 150)
             self.chests.append((x, y))
 
         self.equippables = []
@@ -46,7 +48,21 @@ class Room:
                          (self.field), 5)
 
     def draw_enemies(self, player, scroll, dt):
-        for enemy in self.enemies:
+        for enemy in Enemy.enemies:
             angle = enemy.vector.degree(player.vector)
+            enemy.shoot(player, scroll)
+            enemy.move(player, dt, scroll)
             enemy.draw(self.display, angle, scroll)
-            enemy.move(player, self.enemies, dt, scroll)
+        Enemy.explode_enemies(self.display, scroll)
+
+    def collision(self):
+        for enemy in Enemy.enemies:
+            for bullet in weapons.Bullet.player_bullets:
+                enemy_mask = pygame.mask.from_surface(enemy.surf)
+                bullet_mask = pygame.mask.from_surface(bullet.surf)
+                offset = (bullet.pos.x - enemy.vector.x,
+                          bullet.pos.y - enemy.vector.y)
+                if enemy_mask.overlap(bullet_mask, offset):
+                    Enemy.enemy_exploding.append([0, enemy])
+                    Enemy.enemies.remove(enemy)
+                    weapons.Bullet.player_bullets.remove(bullet)

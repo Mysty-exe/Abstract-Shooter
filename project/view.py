@@ -3,7 +3,7 @@ import project.constants as constants
 import project.events as events
 import project.weapons as weapons
 import project.powerups as powerups
-from project.characters import Player
+import project.characters as entity
 from project.room import Room
 
 
@@ -16,6 +16,15 @@ class View:
 
     def draw_cursor(self, cursor, pos):
         self.screen.blit(cursor, (pos[0] - 16, pos[1] - 16))
+
+    def mouse_interaction(self, point, object, vector):
+        object_mask = pygame.mask.from_surface(object)
+        offset = (point.x - vector.x, point.y - vector.y)
+        try:
+            if object_mask.get_at(offset):
+                return True
+        except IndexError:
+            return False
 
 
 class GameView(View):
@@ -53,15 +62,19 @@ class GameView(View):
 
         self.idle_cursor = pygame.image.load(cursor1).convert_alpha()
         self.target_cursor = pygame.image.load(cursor2).convert_alpha()
+        self.idle_cursor = pygame.transform.scale(self.idle_cursor, (32, 32))
+        self.target_cursor = pygame.transform.scale(self.target_cursor,
+                                                    (32, 32))
 
         self.true_scroll = [0, 0]
         self.scroll = self.true_scroll.copy()
 
-        self.room = Room(self.display, 2000, 10)
+        self.room = Room(self.display, 2000, 5)
 
-        self.player = Player(self.room, weapons.Pistol(), powerups.PowerUp)
-        Player.powerups = powerups.PowerUp.powerups
-        Player.guns = weapons.Gun.guns
+        self.player = entity.Player(self.room, weapons.Pistol(),
+                                    powerups.PowerUp)
+        entity.Player.powerups = powerups.PowerUp.powerups
+        entity.Player.guns = weapons.Gun.guns
 
     def run(self, dt, state):
         self.update_camera()
@@ -75,6 +88,14 @@ class GameView(View):
         mouseVector = self.m_input.process_events(mouse_pressed, pos)
         player_angle = self.player.realVector.degree(mouseVector)
 
+        for enemy in entity.Enemy.enemies:
+            if self.mouse_interaction(mouseVector, enemy.surf,
+                                      enemy.realVector - enemy.size / 2):
+                self.cursor_state = 'Target'
+                break
+        else:
+            self.cursor_state = 'Idle'
+
         if self.cursor_state == 'Idle':
             self.draw_cursor(self.idle_cursor, pos)
         else:
@@ -83,10 +104,11 @@ class GameView(View):
         self.room.draw_field(self.scroll)
         self.room.draw_chests(self.scroll)
         self.room.draw_equippables(self.scroll)
-        if (self.timer / 60) > 5:
+        if (self.timer / 60) > 0:
             self.room.draw_enemies(self.player, self.scroll, dt)
+            self.room.collision()
 
-        weapons.Bullet.draw(self.display, dt, self.scroll)
+        weapons.Bullet.draw(self.display, dt, self.scroll, self.room.size)
         weapons.Bullet.explode_bullets(self.display, self.scroll)
 
         mouse = self.m_input.button_pressed
@@ -108,5 +130,5 @@ class GameView(View):
         width, height = self.width / 2, self.height / 2
         self.true_scroll[0] += (x - self.scroll[0] - width) / 15
         self.true_scroll[1] += (y - self.scroll[1] - height) / 15
-        self.scroll[0] = int(self.true_scroll[0])
-        self.scroll[1] = int(self.true_scroll[1])
+        self.scroll[0] = round(self.true_scroll[0])
+        self.scroll[1] = round(self.true_scroll[1])

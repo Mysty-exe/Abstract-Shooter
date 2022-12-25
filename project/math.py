@@ -46,7 +46,10 @@ class Vector:
             y = self.y / num
         return Vector(x, y)
 
-    def __round__(self):
+    def __abs__(self):
+        return Vector(abs(self.x), abs(self.y))
+
+    def round(self):
         self.x = round(self.x)
         self.y = round(self.y)
         return self
@@ -67,8 +70,11 @@ class Vector:
         return Vector(midpoint[0], midpoint[1])
 
     def normalize(self):
-        mag = self.magnitude()
-        normalized = self / mag
+        try:
+            mag = self.magnitude()
+            normalized = self / mag
+        except ZeroDivisionError:
+            normalized = Vector(0, 0)
         return normalized
 
     def degree(self, vector):

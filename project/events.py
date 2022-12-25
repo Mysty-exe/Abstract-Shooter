@@ -1,21 +1,6 @@
 import pygame
 from project.math import Vector
 
-# class KeyboardInput:
-
-#     def __init__(self):
-#         self.events_queue = []
-
-#     def process_events(self, events):
-#         for event in characters.Player.keys:
-#             if events[event]:
-#                 self.events_queue.append(event)
-
-#         return self.events_queue
-
-#     def empty_queue(self):
-#         self.events_queue.clear()
-
 
 class MouseInput:
 

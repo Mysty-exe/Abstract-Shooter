@@ -11,10 +11,11 @@ class Entity:
         self.vector = Vector(x, y)
         self.realVector = Vector(x, y)
         self.width, self.height = width, height
+        self.color = color
 
         self.surf = pygame.Surface((width, height))
+        self.surf.fill(self.color)
         self.surf.set_colorkey(constants.COLOURS['blue'])
-        self.surf.fill(color)
 
         self.rotated = pygame.transform.rotate(self.surf, 0)
         self.rotated_rect = self.rotated.get_rect()
@@ -43,21 +44,21 @@ class Player(Entity):
     powerups = []
 
     def __init__(self, room, gun, powerup):
-        Entity.__init__(self, room, 100, 100, 64, 64,
-                        constants.COLOURS['black'])
+        self.size = 48
+        Entity.__init__(self, room, room.size / 2, room.size / 2, self.size,
+                        self.size, constants.COLOURS['black'])
+        self.room = room
         self.gun = gun
         self.twoguns = [
-            Vector(self.vector.x - 32, self.vector.y + 32),
-            Vector(self.vector.x - 32, self.vector.y - 32)
+            Vector(self.vector.x - (self.width / 2),
+                   self.vector.y + (self.width / 2)),
+            Vector(self.vector.x - (self.width / 2),
+                   self.vector.y - (self.width / 2))
         ]
         self.powerup = powerup
         self.direction = [None, None, None, None]
-        self.increment = Vector(0, 0)
-
-        self.circle = []
         self.speed = 7
-        self.velx = 0
-        self.vely = 0
+        self.vel = Vector(0, 0)
         self.velgoalx = 0
         self.velgoaly = 0
 
@@ -75,8 +76,10 @@ class Player(Entity):
 
     def draw(self, screen, angle, scroll):
         self.twoguns = [
-            Vector(self.vector.x - 32, self.vector.y + 32),
-            Vector(self.vector.x - 32, self.vector.y - 32)
+            Vector(self.vector.x - (self.width / 2),
+                   self.vector.y + (self.width / 2)),
+            Vector(self.vector.x - (self.width / 2),
+                   self.vector.y - (self.width / 2))
         ]
 
         for i, v in enumerate(self.twoguns):
@@ -84,8 +87,8 @@ class Player(Entity):
 
         self.rotated = pygame.transform.rotate(self.surf, angle * -1)
         self.rotated_rect = self.rotated.get_rect(
-            center=(self.vector.x,
-                    self.vector.y)).clamp(pygame.Rect(0, 0, 2000, 2000))
+            center=(self.vector.x, self.vector.y)).clamp(
+                pygame.Rect(0, 0, self.room.size, self.room.size))
 
         self.rotated_rect.x -= scroll[0]
         self.rotated_rect.y -= scroll[1]
@@ -145,12 +148,11 @@ class Player(Entity):
         self.hit_border(scroll)
         self.update_speed()
         self.dash(mouse, dt, scroll)
-        self.velx = self.approach(self.velgoalx, self.velx, dt / 5)
-        self.vely = self.approach(self.velgoaly, self.vely, dt / 5)
+        self.vel.x = self.approach(self.velgoalx, self.vel.x, dt / 5)
+        self.vel.y = self.approach(self.velgoaly, self.vel.y, dt / 5)
         if not self.hit_border(scroll):
-            self.vector.x += self.velx * dt
-            self.vector.y += self.vely * dt
-        self.increment = Vector(self.velx * dt, self.vely * dt)
+            self.vector += self.vel * dt
+            self.vector.round()
 
     def update_speed(self):
         if self.gun.name == 'Pistol':
@@ -204,17 +206,17 @@ class Player(Entity):
         x, y = self.rotated_rect.x, self.rotated_rect.y
         width = self.rotated_rect.width
         if (x + scroll[0]) == 0:
-            self.vector.x += 0.5
+            self.vector.x += 1
             return True
-        if (x + scroll[0] + width) == 2000:
-            self.vector.x -= 0.5
+        if (x + scroll[0] + width) == self.room.size:
+            self.vector.x -= 1
             return True
 
         if (y + scroll[1]) == 0:
-            self.vector.y += 0.5
+            self.vector.y += 1
             return True
-        if (y + scroll[1] + width) == 2000:
-            self.vector.y -= 0.5
+        if (y + scroll[1] + width) == self.room.size:
+            self.vector.y -= 1
             return True
 
         return False
@@ -226,19 +228,20 @@ class Player(Entity):
 
         if mouseInput != False and self.gun.trigger_time == 0 and not self.gun.reloading:
             self.gun.ammo -= 1
-            if self.gun.double:
+            if self.gun.double and self.gun.name != 'Shotgun':
                 for gun in self.twoguns:
                     point = gun.midpoint(self.vector)
                     self.gun.add_bullet(point.x, point.y, mouseCoord,
-                                        self.realVector)
+                                        self.realVector, self.color, 'Player')
             else:
                 self.gun.add_bullet(self.vector.x, self.vector.y, mouseCoord,
-                                    self.realVector)
+                                    self.realVector, self.color, 'Player')
             self.gun.trigger_time = self.gun.max_trigger
 
     def unlock_chest(self):
         for chest in self.room.chests:
-            chestVector = Vector(chest[0] + 64, chest[1] + 64)
+            chestVector = Vector(chest[0] + (self.width),
+                                 chest[1] + (self.width))
             if self.vector.distance(chestVector) <= 150:
                 equippables = [self.gun.random()] * 6 + [self.powerups[6]] * 4
                 equippable = random.choice(equippables)
@@ -252,7 +255,8 @@ class Player(Entity):
 
     def collect_equippables(self):
         for eq in self.room.equippables:
-            equipVector = Vector(eq[1][0] + 64, eq[1][1] + 64)
+            equipVector = Vector(eq[1][0] + (self.width),
+                                 eq[1][1] + (self.width))
             if self.vector.distance(equipVector) <= 100:
                 self.room.equippables.remove(eq)
                 if eq[0][0] in [gun.name for gun in self.guns]:
@@ -326,87 +330,226 @@ class Player(Entity):
 
 
 class Enemy(Entity):
+    enemies = []
+    enemy_exploding = []
+    distance_between_entities = 100
 
-    def __init__(self, room, gun):
-        possible_coords = [(random.randint(500, 1900), 100),
-                           (1900, random.randint(100, 1900)),
-                           (random.randint(100, 1900), 1900),
-                           (100, random.randint(500, 1900))]
-        x, y = random.choice(possible_coords)
-        Entity.__init__(self, room, x, y, 64, 64, constants.COLOURS['white'])
+    def __init__(self, room, num, gun):
+        self.x, self.y = random.choice(constants.POSS_LOCATIONS)
+        self.size = 48
+        Entity.__init__(self, room, self.x, self.y, self.size, self.size,
+                        gun.color)
 
-        self.vector = Vector(x, y)
-        self.realVector = Vector(x, y)
+        self.explode = {
+            1:
+            pygame.image.load('assets/enemy_explosion/1.png').convert_alpha(),
+            2:
+            pygame.image.load('assets/enemy_explosion/2.png').convert_alpha(),
+            3:
+            pygame.image.load('assets/enemy_explosion/3.png').convert_alpha(),
+            4:
+            pygame.image.load('assets/enemy_explosion/4.png').convert_alpha(),
+            5:
+            pygame.image.load('assets/enemy_explosion/5.png').convert_alpha(),
+            6:
+            pygame.image.load('assets/enemy_explosion/6.png').convert_alpha(),
+            7:
+            pygame.image.load('assets/enemy_explosion/7.png').convert_alpha(),
+            8:
+            pygame.image.load('assets/enemy_explosion/8.png').convert_alpha(),
+            9:
+            pygame.image.load('assets/enemy_explosion/9.png').convert_alpha(),
+            10:
+            pygame.image.load('assets/enemy_explosion/10.png').convert_alpha(),
+            11:
+            pygame.image.load('assets/enemy_explosion/11.png').convert_alpha(),
+            12:
+            pygame.image.load('assets/enemy_explosion/12.png').convert_alpha(),
+            13:
+            pygame.image.load('assets/enemy_explosion/13.png').convert_alpha(),
+            14:
+            pygame.image.load('assets/enemy_explosion/14.png').convert_alpha(),
+            15:
+            pygame.image.load('assets/enemy_explosion/15.png').convert_alpha(),
+            16:
+            pygame.image.load('assets/enemy_explosion/16.png').convert_alpha(),
+            17:
+            pygame.image.load('assets/enemy_explosion/17.png').convert_alpha(),
+            18:
+            pygame.image.load('assets/enemy_explosion/18.png').convert_alpha(),
+            19:
+            pygame.image.load('assets/enemy_explosion/19.png').convert_alpha(),
+            20:
+            pygame.image.load('assets/enemy_explosion/20.png').convert_alpha(),
+            21:
+            pygame.image.load('assets/enemy_explosion/21.png').convert_alpha(),
+            22:
+            pygame.image.load('assets/enemy_explosion/22.png').convert_alpha(),
+            23:
+            pygame.image.load('assets/enemy_explosion/23.png').convert_alpha(),
+            24:
+            pygame.image.load('assets/enemy_explosion/24.png').convert_alpha(),
+            25:
+            pygame.image.load('assets/enemy_explosion/25.png').convert_alpha(),
+            26:
+            pygame.image.load('assets/enemy_explosion/26.png').convert_alpha(),
+            27:
+            pygame.image.load('assets/enemy_explosion/27.png').convert_alpha(),
+            28:
+            pygame.image.load('assets/enemy_explosion/28.png').convert_alpha(),
+            29:
+            pygame.image.load('assets/enemy_explosion/29.png').convert_alpha(),
+            30:
+            pygame.image.load('assets/enemy_explosion/30.png').convert_alpha(),
+            31:
+            pygame.image.load('assets/enemy_explosion/31.png').convert_alpha(),
+            32:
+            pygame.image.load('assets/enemy_explosion/32.png').convert_alpha(),
+        }
+
+        for x in range(1, len(self.explode) + 1):
+            self.explode[x] = pygame.transform.scale(self.explode[x],
+                                                     (160, 120))
+            self.explode[x].set_colorkey(constants.COLOURS['black'])
+
+        self.vector = Vector(self.x, self.y)
+        self.realVector = Vector(self.x, self.y)
+        self.num = num
         self.gun = gun
 
-        self.speed = 3
-        self.vel = 0
+        self.twoguns = [
+            Vector(self.vector.x - (self.width / 2),
+                   self.vector.y + (self.width / 2)),
+            Vector(self.vector.x - (self.width / 2),
+                   self.vector.y - (self.width / 2))
+        ]
+
+        self.speed = 5
+        self.vel = Vector(0, 0)
         self.velgoal = self.speed
 
-        self.locations = []
-        self.poss_locations = []
+        self.location = Vector(0, 0)
         self.direction = 0
-        self.distance = 200
-        self.dest = Vector(0, 0)
-        self.moving = False
-        self.arrived = False
+        self.distance = 300
 
     def draw(self, screen, angle, scroll):
+
+        self.twoguns = [
+            Vector(self.vector.x - (self.width / 2),
+                   self.vector.y + (self.width / 2)),
+            Vector(self.vector.x - (self.width / 2),
+                   self.vector.y - (self.width / 2))
+        ]
+
+        for i, v in enumerate(self.twoguns):
+            self.twoguns[i] = v.rotate(self.vector, angle)
+
         self.rotated = pygame.transform.rotate(self.surf, angle * -1)
         self.rotated_rect = self.rotated.get_rect(
-            center=(self.vector.x,
-                    self.vector.y)).clamp(pygame.Rect(0, 0, 2000, 2000))
+            center=(self.vector.x, self.vector.y)).clamp(
+                pygame.Rect(0, 0, self.room.size, self.room.size))
 
         self.rotated_rect.x -= scroll[0]
         self.rotated_rect.y -= scroll[1]
         self.realVector = self.vector - Vector(scroll[0], scroll[1])
 
-        pygame.draw.rect(self.surf, constants.COLOURS['black'], self.border, 3)
+        pygame.draw.rect(self.surf, constants.COLOURS['white'], self.border, 3)
         screen.blit(self.rotated, self.rotated_rect)
 
-    # def collide(self, enemies):
-    #     enemies_rect = [e.rotated_rect for e in enemies if self != e]
-    #     enemies = [e for e in enemies if self != e]
-    #     x = self.rotated_rect.collidelist(enemies_rect)
-    #     if x == -1:
-    #         return
+    def hit_border(self, scroll):
+        x, y = self.rotated_rect.x, self.rotated_rect.y
+        width = self.rotated_rect.width
+        if (x + scroll[0]) == 0:
+            self.vector.x += 1
+            return True
+        if (x + scroll[0] + width) == self.room.size:
+            self.vector.x -= 1
+            return True
 
-    #     # print(x)
-    #     # print([e.vector.coord() for e in enemies if self != e])
-    #     # print(enemies[x].vector, self.vector)
-    #     # print(enemies[x].vector - self.vector)
-    #     # print((enemies[x].vector - self.vector) * -1)
-    #     # print()
+        if (y + scroll[1]) == 0:
+            self.vector.y += 1
+            return True
+        if (y + scroll[1] + width) == self.room.size:
+            self.vector.y -= 1
+            return True
 
-    #     self.direction = ((enemies[x].vector - self.vector) * -1).normalize()
+        return False
 
-    def move(self, player, enemies, dt, scroll):
+    def seperate(self):
+        force = Vector(0, 0)
+        count = 0
 
-        # self.locations = []
-        # for angle in range(0, 361):
-        #     self.locations.append(player.vector.getCircle(
-        #         self.distance, angle))
+        for enemy in Enemy.enemies:
+            if self != enemy and self.vector.distance(
+                    enemy.vector) <= Enemy.distance_between_entities:
+                diff = self.vector - enemy.vector
+                diff.normalize()
+                if diff.x == 0 and diff.y == 0:
+                    diff = 1
+                else:
+                    diff /= self.vector.distance(enemy.vector)
+                force += diff
+                count += 1
 
-        # distances = sorted([(d, self.vector.distance(d))
-        #                     for d in self.locations],
-        #                    key=lambda t: t[1])[:30]
+        if count > 0:
+            force /= count
+            force.normalize()
+            force *= self.vel
 
-        # self.dest = distances[random.randint(0, 29)][0]
-        self.direction = (player.vector - self.vector).normalize()
-        # self.moving = True
+        return force
 
-        # if not player.increment.is_zero():
-        #     self.dest += player.increment
-        #     self.direction = (self.dest - self.vector).normalize()
+    def move(self, player, dt, scroll):
+        self.location = (player.vector +
+                         ((self.vector - player.vector).normalize() *
+                          self.distance)).round()
+        self.direction = (self.location - self.vector).normalize()
 
-        if player.vector.distance(self.vector) > self.distance:
-            self.velgoal = self.speed
-            # self.moving = True
-            # self.arrived = False
-        else:
+        if self.vector.distance(self.location) < 100:
             self.velgoal = 0
-            # self.moving = False
-            # self.arrived = True
+        else:
+            self.velgoal = self.speed
 
-        self.vel = self.approach(self.velgoal, self.vel, dt / 5)
-        self.vector += self.direction * self.vel * dt
+        self.vel.x = self.approach(self.velgoal, self.vel.x, dt / 5)
+        self.vel.y = self.approach(self.velgoal, self.vel.y, dt / 5)
+
+        if not self.hit_border(scroll):
+            self.vector += (self.direction * self.vel) + self.seperate()
+            self.vector.round()
+
+    def shoot(self, player, scroll):
+
+        self.gun.trigger_time = self.gun.reload(self.gun.reload_time,
+                                                self.gun.trigger_time,
+                                                self.gun.max_ammo)
+
+        if self.gun.trigger_time == 0 and not self.gun.reloading:
+            self.gun.ammo -= 1
+            if self.gun.double and self.gun.name != 'Shotgun':
+                for gun in self.twoguns:
+                    point = gun.midpoint(self.vector)
+                    self.gun.add_bullet(point.x,
+                                        point.y,
+                                        player.vector,
+                                        player.vector,
+                                        self.color,
+                                        'Enemy',
+                                        enemy=self.vector)
+            else:
+                self.gun.add_bullet(self.vector.x,
+                                    self.vector.y,
+                                    player.vector,
+                                    player.vector,
+                                    self.color,
+                                    'Enemy',
+                                    enemy=self.vector)
+            self.gun.trigger_time = self.gun.max_trigger
+
+    @classmethod
+    def explode_enemies(cls, screen, scroll):
+        for enemy in cls.enemy_exploding:
+            x, y = enemy[1].vector.x, enemy[1].vector.y
+            screen.blit(enemy[1].explode[enemy[0] + 1],
+                        (x - scroll[0] - 80, y - scroll[1] - 60))
+            enemy[0] += 1
+            if enemy[0] == 32:
+                cls.enemy_exploding.remove(enemy)
