@@ -13,11 +13,6 @@ class MouseInput:
         for event in events:
             if event.type == pygame.QUIT:
                 state = 'Quit'
-            if event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE:
-                if state == 'Game':
-                    state = 'Paused'
-                elif state == 'Paused':
-                    state = 'Game'
         return state
 
     def process_events(self, pressed, coords):

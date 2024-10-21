@@ -157,6 +157,12 @@ class GameView(View):
         self.timer += 1
         self.update_difficulty(self.timer)
 
+        for event in events:
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    self.paused = True
+                    state = 'Paused'
+
         render_offset = [0, 0]
         if self.screenshake > 0:
             self.screenshake -= 1
@@ -242,7 +248,6 @@ class GameView(View):
         for event in events:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
-                    print('yes') 
                     self.paused = False
                     state = 'Game'
 

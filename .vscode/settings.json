@@ -1,0 +1,19 @@
+{
+  "workbench.colorCustomizations": {
+    "editor.tokenColorCustomizations": {
+      "keywords": "#A28AD2",
+      "strings": "#ADE63B",
+      "variables": "#7EF9FF",
+      "functions": "#FFA500",
+      "numbers": "#DFFF00",
+      "types": "#307D7E"
+    },
+    "editor.semanticTokenColorCustomizations": {
+      "[Palenight Theme]": {
+        "enabled": true
+      }
+    },
+    "minimap.background": "#00000000",
+    "scrollbar.shadow": "#00000000"
+  }
+}

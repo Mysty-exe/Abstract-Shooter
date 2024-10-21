@@ -512,7 +512,6 @@ class Enemy(Entity):
 
         pygame.draw.rect(self.surf, constants.COLOURS['white'], self.border, 3)
         screen.blit(self.rotated, self.rotated_rect)
-        print(self.acceleration)
 
     def hit_border(self, scroll):
         x, y = self.rotated_rect.x, self.rotated_rect.y
